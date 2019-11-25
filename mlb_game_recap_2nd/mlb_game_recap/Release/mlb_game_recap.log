@@ -1,0 +1,7 @@
+﻿  main.cpp
+  MlbGameRecap.cpp
+  SdlWrapper.cpp
+  Generating code
+  All 1552 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  mlb_game_recap.vcxproj -> D:\mlb_game_recap_application\mlb_game_recap_2nd\Release\mlb_game_recap.exe
