@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
         return result;
     }
 
-    sdl.LoadMedia("background.jpg", false);
+    sdl.LoadBackground("background.jpg");
 
     for (size_t index = 0; index < games.size(); ++index)
     {

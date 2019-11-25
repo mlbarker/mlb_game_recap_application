@@ -17,6 +17,7 @@ public:
     SdlWrapper();
 
     int32_t Initialize(const std::string& windowTitle);
+    int32_t LoadBackground(const std::string& path);
     int32_t LoadMedia(const std::string& path, bool centered = false, int32_t offsetX = 0, int32_t offsetY = 0);
     int32_t Run();
     int32_t Shutdown();
@@ -36,9 +37,10 @@ private:
     std::vector<SDL_Texture*> m_textures;
     std::vector<RenderCoords> m_textureRects;
     SDL_Surface* m_windowSurface;
-    SDL_Surface* m_backgroundSurface;
+    SDL_Texture* m_backgroundTexture;
     SDL_Renderer* m_renderer;
     SDL_Window* m_window;
+    uint32_t m_cursor;
     bool m_exit;
 };
 

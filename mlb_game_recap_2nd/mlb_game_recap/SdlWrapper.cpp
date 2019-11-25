@@ -8,11 +8,12 @@
 
 SdlWrapper::SdlWrapper()
     : m_textures()
-    , m_backgroundSurface(nullptr)
+    , m_backgroundTexture(nullptr)
     , m_windowSurface(nullptr)
     , m_renderer(nullptr)
     , m_window(nullptr)
     , m_exit(false)
+    , m_cursor(0)
 {
 }
 
@@ -43,6 +44,44 @@ int32_t SdlWrapper::Initialize(const std::string& windowTitle)
     {
         return result;
     }
+
+    return EXIT_SUCCESS;
+}
+
+int32_t SdlWrapper::LoadBackground(const std::string& path)
+{
+    if (m_renderer == nullptr)
+    {
+        return EXIT_FAILURE;
+    }
+
+    if (m_backgroundTexture != nullptr)
+    {
+        SDL_DestroyTexture(m_backgroundTexture);
+    }
+
+    SDL_Surface* surface = IMG_Load(path.c_str());
+    if (surface == nullptr)
+    {
+        std::cout << "Image failed to load for texture creation: " << IMG_GetError() << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    // create texture from surface pixels
+    m_backgroundTexture = SDL_CreateTextureFromSurface(m_renderer, surface);
+    if (m_backgroundTexture == nullptr)
+    {
+        std::cout << "Failed to load texture from surface: " << SDL_GetError() << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    if (m_backgroundTexture == nullptr)
+    {
+        std::cout << "Failed to load a texture" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    SDL_FreeSurface(surface);
 
     return EXIT_SUCCESS;
 }
@@ -82,9 +121,29 @@ int32_t SdlWrapper::Run()
 
         // clear, render, update
         SDL_RenderClear(m_renderer);
+        SDL_RenderCopy(m_renderer, m_backgroundTexture, nullptr, nullptr);
+
+        int32_t scale = 50;
         SDL_Rect renderRect;
         for (size_t index = 0; index < m_textures.size(); ++index)
         {
+            if (m_cursor == index && !m_textureRects[index].scaled)
+            {
+                m_textureRects[index].x -= scale;
+                m_textureRects[index].y -= scale;
+                m_textureRects[index].width += scale;
+                m_textureRects[index].height += scale;
+                m_textureRects[index].scaled = true;
+            }
+            else if (m_cursor != index && m_textureRects[index].scaled)
+            {
+                m_textureRects[index].x += scale;
+                m_textureRects[index].y += scale;
+                m_textureRects[index].width -= scale;
+                m_textureRects[index].height -= scale;
+                m_textureRects[index].scaled = false;
+            }
+            
             renderRect.x = m_textureRects[index].x;
             renderRect.y = m_textureRects[index].y;
             renderRect.w = m_textureRects[index].width;
@@ -110,9 +169,9 @@ int32_t SdlWrapper::Shutdown()
 {
     // clean up
     FreeTextures();
-    SDL_FreeSurface(m_backgroundSurface);
+    SDL_DestroyTexture(m_backgroundTexture);
     SDL_FreeSurface(m_windowSurface);
-    m_backgroundSurface = nullptr;
+    m_backgroundTexture = nullptr;
     m_windowSurface = nullptr;
 
     // quitting...
@@ -218,11 +277,19 @@ void SdlWrapper::ProcessKeyboardInput(SDL_Event& event)
     switch (event.key.keysym.sym)
     {
     case SDLK_LEFT:
-        UpdateTextureMovement(-500);
+        if (m_cursor > 0)
+        {
+            UpdateTextureMovement(500);
+            --m_cursor;
+        }
         break;
 
     case SDLK_RIGHT:
-        UpdateTextureMovement(500);
+        if (m_cursor < m_textures.size() - 1)
+        {
+            UpdateTextureMovement(-500);
+            ++m_cursor;
+        }
         break;
 
     default:
@@ -265,11 +332,30 @@ SDL_Texture* SdlWrapper::LoadTexture(const std::string& path, bool centered, int
     // applying the offset
     if (offsetX != 0)
     {
-        textureCoords.x += (offsetX + textureCoords.width);
+        // such a hack. need to find a better
+        // way to do this. I have to account
+        // for the background image.
+        int32_t textureRectAmount = m_textureRects.size();
+        if (textureRectAmount > 1)
+        {
+            textureCoords.x = m_textureRects[textureRectAmount - 1].x + m_textureRects[textureRectAmount - 1].width + offsetX;
+        }
+        else
+        {
+            textureCoords.x += (offsetX + textureCoords.width);
+        }
     }
     if (offsetY != 0)
     {
-        textureCoords.y += (offsetY + textureCoords.height);
+        int32_t textureRectAmount = m_textureRects.size();
+        if (textureRectAmount > 1)
+        {
+            textureCoords.y = m_textureRects[textureRectAmount - 1].y + m_textureRects[textureRectAmount - 1].width + offsetY;
+        }
+        else
+        {
+            textureCoords.y += (offsetY + textureCoords.height);
+        }
     }
 
     m_textureRects.push_back(textureCoords);
@@ -292,7 +378,7 @@ void SdlWrapper::FreeTextures()
 
 void SdlWrapper::UpdateTextureMovement(int32_t moveX)
 {
-    for (size_t index = 1; index < m_textures.size(); ++index)
+    for (size_t index = 0; index < m_textures.size(); ++index)
     {
         m_textureRects[index].x += moveX;
     }
